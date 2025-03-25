@@ -6,95 +6,131 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { contestCreate } from "@/utils/data/contest/contestCreate";
-import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 type Competition = {
   id: string;
   name: string;
 };
 
+type ContestFormData = {
+  competitionId: string;
+  year: number;
+  startTime: string;
+  endTime: string;
+  predictionDeadline: string;
+  isActive: boolean;
+};
+
 export const ContestForm = ({ competitions }: { competitions: Competition[] }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { register, handleSubmit, control, formState: { isSubmitting } } = useForm<ContestFormData>({
+    defaultValues: {
+      isActive: true,
+      competitionId: competitions.length > 0 ? competitions[0].id : ""
+    }
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      competitionId: formData.get("competitionId") as string,
-      year: parseInt(formData.get("year") as string),
-      startTime: new Date(formData.get("startTime") as string),
-      endTime: new Date(formData.get("endTime") as string),
-      predictionDeadline: new Date(formData.get("predictionDeadline") as string),
-      isActive: formData.get("isActive") === "true",
-    };
-
+  const onSubmit = async (data: ContestFormData) => {
     try {
-      await contestCreate(data);
+      console.log("Contest data being submitted:", data);
+      
+      await contestCreate({
+        ...data,
+        year: parseInt(data.year.toString()),
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        predictionDeadline: new Date(data.predictionDeadline),
+      });
       toast.success("Contest created successfully");
-      e.currentTarget.reset();
+      router.push("/contests");
     } catch (error: any) {
       toast.error(error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="competitionId">Competition</Label>
-        <Select name="competitionId" required>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a competition" />
-          </SelectTrigger>
-          <SelectContent>
-            {competitions.map((competition) => (
-              <SelectItem key={competition.id} value={competition.id}>
-                {competition.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Controller
+          name="competitionId"
+          control={control}
+          rules={{ required: true }}
+          render={({ field }) => (
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a competition" />
+              </SelectTrigger>
+              <SelectContent>
+                {competitions.map((competition) => (
+                  <SelectItem key={competition.id} value={competition.id}>
+                    {competition.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="year">Year</Label>
         <Input 
           id="year" 
-          name="year" 
           type="number" 
-          required 
-          min={2000} 
-          max={2100}
+          {...register("year", { 
+            required: true,
+            min: 2000,
+            max: 2100,
+            valueAsNumber: true
+          })}
           placeholder="e.g., 2024" 
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="startTime">Start Time</Label>
-        <Input id="startTime" name="startTime" type="datetime-local" required />
+        <Input 
+          id="startTime" 
+          type="datetime-local" 
+          {...register("startTime", { required: true })}
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="endTime">End Time</Label>
-        <Input id="endTime" name="endTime" type="datetime-local" required />
+        <Input 
+          id="endTime" 
+          type="datetime-local" 
+          {...register("endTime", { required: true })}
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="predictionDeadline">Prediction Deadline</Label>
-        <Input id="predictionDeadline" name="predictionDeadline" type="datetime-local" required />
+        <Input 
+          id="predictionDeadline" 
+          type="datetime-local" 
+          {...register("predictionDeadline", { required: true })}
+        />
       </div>
 
       <div className="flex items-center space-x-2">
-        <Switch id="isActive" name="isActive" defaultChecked />
+        <Switch 
+          id="isActive" 
+          {...register("isActive")}
+        />
         <Label htmlFor="isActive">Active</Label>
       </div>
 
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Creating..." : "Create Contest"}
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Creating..." : "Create Contest"}
       </Button>
     </form>
   );
