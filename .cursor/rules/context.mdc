@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# about the app 
+
+Sports Prediction Platform
+A recurring competition platform where users predict sports league standings and compete on leaderboards.
+
+Core Features:
+
+Recurring Competitions
+
+Host annual seasons for sports leagues (Premier League, IPL, La Liga)
+
+Admin-controlled deadlines and contest duration
+
+Predictions System
+
+Users submit final standings predictions before season start
+
+Immutable predictions with team position rankings
+
+Multi-Level Leaderboards
+
+Per Competition:
+
+Seasonal (e.g., "Premier League 2024")
+
+All-Time (historical performance across all seasons)
+
+Global:
+
+Annual (all competitions in a year)
+
+All-Time (lifetime performance across all leagues)
+
+User Engagement
+
+Profile system with achievement tracking
+
+Cross-season participation tracking

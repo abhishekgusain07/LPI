@@ -1,4 +1,7 @@
-import { boolean, integer, pgTable, primaryKey, text, timestamp, varchar, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, primaryKey, text, timestamp, varchar, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
+
+// First, create the enum type
+export const sportTypeEnum = pgEnum('sport_type_enum', ['cricket', 'football', 'basketball']);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -15,7 +18,7 @@ export const competitions = pgTable("competitions", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(), // "Premier League"
   slug: text("slug").notNull().unique(), // "premier-league"
-  sportType: text("sport_type").notNull(),
+  sportType: sportTypeEnum("sport_type_enum").notNull(), // Match the enum name exactly
   logoUrl: text("logo_url"),
   seasonDuration: text("season_duration"), // "September-June" for display
 });
