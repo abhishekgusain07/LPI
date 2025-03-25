@@ -3,6 +3,7 @@
 import { db } from "@/db/drizzle";
 import { users } from "@/db/schema";
 import { userCreateProps } from "@/utils/types";
+import { uid } from "uid";
 
 export const userCreate = async ({
   email,
@@ -20,6 +21,7 @@ export const userCreate = async ({
       userId: user_id,
     });
     const result = db.insert(users).values({
+      id: uid(32),
       email,
       firstName: first_name,
       lastName: last_name,
