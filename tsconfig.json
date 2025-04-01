@@ -29,6 +29,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "next.config.ts"
-  ],
+, "scripts/seed-teams.mjs"  ],
   "exclude": ["node_modules"]
 }

@@ -23,21 +23,7 @@ import {
 import { format, isBefore } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Dummy teams for testing
-const dummyTeams: Team[] = [
-  { id: "team-1", name: "Manchester United", shortCode: "MUN", logoUrl: "https://resources.premierleague.com/premierleague/badges/t1.png" },
-  { id: "team-2", name: "Arsenal", shortCode: "ARS", logoUrl: "https://resources.premierleague.com/premierleague/badges/t3.png" },
-  { id: "team-3", name: "Chelsea", shortCode: "CHE", logoUrl: "https://resources.premierleague.com/premierleague/badges/t8.png" },
-  { id: "team-4", name: "Liverpool", shortCode: "LIV", logoUrl: "https://resources.premierleague.com/premierleague/badges/t14.png" },
-  { id: "team-5", name: "Manchester City", shortCode: "MCI", logoUrl: "https://resources.premierleague.com/premierleague/badges/t43.png" },
-  { id: "team-6", name: "Tottenham Hotspur", shortCode: "TOT", logoUrl: "https://resources.premierleague.com/premierleague/badges/t6.png" },
-  { id: "team-7", name: "Newcastle United", shortCode: "NEW", logoUrl: "https://resources.premierleague.com/premierleague/badges/t4.png" },
-  { id: "team-8", name: "West Ham United", shortCode: "WHU", logoUrl: "https://resources.premierleague.com/premierleague/badges/t21.png" },
-];
-
 export default function PredictionPage({ params }: { params: { contestId: string } }) {
-  // Instead of using React.use, we'll stick with the params prop for now
-  // since we're in a client component
   const contestId = params.contestId;
   
   const [contest, setContest] = useState<ContestWithTeams | null>(null);
@@ -45,21 +31,32 @@ export default function PredictionPage({ params }: { params: { contestId: string
   const [teams, setTeams] = useState<Team[]>([]);
   const [existingPrediction, setExistingPrediction] = useState<PredictionWithTeams | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [useDummyData, setUseDummyData] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isPastDeadline, setIsPastDeadline] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
   const [hasPrediction, setHasPrediction] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Fetch contest data with teams
         const contestData = await getContestWithTeams(contestId);
         setContest(contestData);
+        
+        if (!contestData) {
+          throw new Error("Contest not found");
+        }
+        
+        // Make sure we have teams for this contest
+        if (!contestData.teams || contestData.teams.length === 0) {
+          setError("No teams found for this contest. Please ask an administrator to add teams.");
+          return;
+        }
         
         // Set deadline date and check if past deadline
         if (contestData.predictionDeadline) {
@@ -73,7 +70,7 @@ export default function PredictionPage({ params }: { params: { contestId: string
         setExistingPrediction(userPrediction);
         
         // If the user has an existing prediction, use that order
-        if (userPrediction && userPrediction.entries.length > 0) {
+        if (userPrediction && userPrediction.entries && userPrediction.entries.length > 0) {
           setHasPrediction(true);
           
           // Map the teams to the order from the prediction
@@ -89,45 +86,21 @@ export default function PredictionPage({ params }: { params: { contestId: string
           setTeams(orderedTeams);
         } 
         // Otherwise, use the teams from the contest
-        else if (contestData.teams.length > 0) {
-          setTeams(contestData.teams);
-        } 
-        // If no teams, use dummy data
         else {
-          setTeams(dummyTeams);
-          setUseDummyData(true);
+          setTeams(contestData.teams);
         }
       } catch (error: any) {
-        toast.error(error.message || "Failed to load contest");
-        // Use dummy data if there's an error
-        setTeams(dummyTeams);
-        setUseDummyData(true);
-        
-        // Create a dummy contest if there's an error
-        const dummyDate = new Date();
-        dummyDate.setDate(dummyDate.getDate() + 7); // Set deadline to 7 days from now
-        
-        setContest({
-          id: contestId,
-          year: 2024,
-          competition: {
-            id: "dummy-competition",
-            name: "Premier League",
-            sportType: "football"
-          },
-          predictionDeadline: dummyDate,
-          teams: dummyTeams
-        });
-        
-        setDeadlineDate(dummyDate);
-        setIsPastDeadline(false);
+        const errorMessage = error.message || "Failed to load contest";
+        console.error("Error fetching contest data:", error);
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [contestId]); // Updated dependency to use contestId
+  }, [contestId]);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -156,12 +129,6 @@ export default function PredictionPage({ params }: { params: { contestId: string
       return;
     }
 
-    if (useDummyData) {
-      toast.success("Prediction saved successfully (Dummy mode)");
-      setShowConfirmDialog(false);
-      return;
-    }
-
     try {
       setSubmitting(true);
       console.log("Starting to save prediction for contest:", contestId);
@@ -183,7 +150,6 @@ export default function PredictionPage({ params }: { params: { contestId: string
       
       console.log("Prediction entries prepared:", predictionEntries);
       
-      // Use contestId here
       try {
         const result = await saveContestPrediction(contestId, predictionEntries);
         console.log("Prediction save result:", result);
@@ -235,12 +201,27 @@ export default function PredictionPage({ params }: { params: { contestId: string
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 max-w-3xl">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        
+        <Button onClick={() => router.push("/contests")} className="mt-4">
+          Return to Contests
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 max-w-3xl">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">
-          {contest?.competition?.name || "Premier League"} {contest?.year || 2024}
-          {useDummyData && <span className="text-sm text-yellow-500 ml-2">(Dummy Mode)</span>}
+          {contest?.competition?.name || "Contest"} {contest?.year || ""}
         </h1>
         <p className="text-muted-foreground">
           Drag and drop teams to predict their final position. Position 1 is the winner.
@@ -287,63 +268,73 @@ export default function PredictionPage({ params }: { params: { contestId: string
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="teams" isDropDisabled={isPastDeadline}>
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="space-y-2"
-                >
-                  {teams.map((team, index) => (
-                    <Draggable 
-                      key={team.id} 
-                      draggableId={team.id} 
-                      index={index}
-                      isDragDisabled={isPastDeadline}
-                    >
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`flex items-center gap-3 p-3 bg-card border rounded-lg ${isPastDeadline ? 'opacity-80' : 'hover:bg-accent/10'} transition-colors`}
-                        >
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                            {index + 1}
-                          </div>
-                          
-                          {team.logoUrl && (
-                            <div className="w-8 h-8 rounded-full overflow-hidden">
-                              <img 
-                                src={team.logoUrl} 
-                                alt={team.name} 
-                                className="w-full h-full object-cover"
-                              />
+          {teams.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>No Teams Available</AlertTitle>
+              <AlertDescription>
+                There are no teams available for this contest. Please contact an administrator.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="teams" isDropDisabled={isPastDeadline}>
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-2"
+                  >
+                    {teams.map((team, index) => (
+                      <Draggable 
+                        key={team.id} 
+                        draggableId={team.id} 
+                        index={index}
+                        isDragDisabled={isPastDeadline}
+                      >
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`flex items-center gap-3 p-3 bg-card border rounded-lg ${isPastDeadline ? 'opacity-80' : 'hover:bg-accent/10'} transition-colors`}
+                          >
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                              {index + 1}
                             </div>
-                          )}
-                          
-                          <div className="flex-1">
-                            <p className="font-medium">{team.name}</p>
-                            {team.shortCode && (
-                              <p className="text-xs text-muted-foreground">{team.shortCode}</p>
+                            
+                            {team.logoUrl && (
+                              <div className="w-8 h-8 rounded-full overflow-hidden">
+                                <img 
+                                  src={team.logoUrl} 
+                                  alt={team.name} 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
                             )}
+                            
+                            <div className="flex-1">
+                              <p className="font-medium">{team.name}</p>
+                              {team.shortCode && (
+                                <p className="text-xs text-muted-foreground">{team.shortCode}</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
         </CardContent>
         <CardFooter>
           <Button 
             className="w-full" 
             onClick={handleSavePrediction}
-            disabled={submitting || isPastDeadline}
+            disabled={submitting || isPastDeadline || teams.length === 0}
           >
             {submitting ? (
               <>
@@ -352,6 +343,8 @@ export default function PredictionPage({ params }: { params: { contestId: string
               </>
             ) : isPastDeadline ? (
               "Prediction Deadline Passed"
+            ) : teams.length === 0 ? (
+              "No Teams Available"
             ) : hasPrediction ? (
               "Update Prediction"
             ) : (
