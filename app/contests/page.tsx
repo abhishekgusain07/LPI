@@ -1,16 +1,41 @@
 "use client"
-import { contestGet } from "@/utils/data/contest/contestGet";
+import { contestGet, ContestWithCompetition } from "@/utils/data/contest/contestGet";
 import { format } from "date-fns";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, Trophy, Users } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Trophy, Users } from "lucide-react";
 import { ContestCard } from "@/components/contests/ContestCard";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-export default async function ContestsPage() {
-  const contests = await contestGet();
-
+export default function ContestsPage() {
+  const [contests, setContests] = useState<ContestWithCompetition[]>([]);
+  const [loadingContests, setLoadingContests] = useState<boolean>(false);
+  
+  useEffect(() => {
+    const fetchContests = async() => {
+      try{
+        setLoadingContests(true);
+        const res = await contestGet();
+        setContests(res);
+        toast.success("Successfully fetched all contests");
+      }catch(e) {
+        toast.error("Failed to fetch contests");
+      }finally{
+        setLoadingContests(false);
+      }
+    }
+    fetchContests();
+  }, []);
+  
+  if(loadingContests) {
+    return <div className="h-screen w-screen flex items-center justify-center">
+      <Loader2 className="size-4 animate-spin" />
+    </div>
+  }
+  
   // Group contests by sport type
-  const contestsByType = contests.reduce((acc, contest) => {
+  const contestsByType = contests?.reduce((acc, contest) => {
     const sportType = contest.competition.sportType;
     if (!acc[sportType]) {
       acc[sportType] = [];
@@ -30,7 +55,7 @@ export default async function ContestsPage() {
         </p>
       </div>
 
-      {Object.entries(contestsByType).map(([sportType, sportContests]) => (
+      {Object.entries(contestsByType || {}).map(([sportType, sportContests]) => (
         <div key={sportType} className="space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-semibold capitalize">{sportType}</h2>
@@ -45,7 +70,7 @@ export default async function ContestsPage() {
         </div>
       ))}
 
-      {contests.length === 0 && (
+      {contests?.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto mb-4">
             <Trophy className="w-full h-full text-muted-foreground/30" />

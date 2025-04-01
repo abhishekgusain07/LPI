@@ -5,19 +5,50 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContestWithCompetition } from "@/utils/data/contest/contestGet";
 import { contestRegister } from "@/utils/data/contest/contestRegister";
+import { getUserPrediction } from "@/utils/data/prediction/getUserPrediction";
 import { format } from "date-fns";
 import { CalendarDays, Clock, Trophy, Users } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) => {
   const [isRegistering, setIsRegistering] = useState(false);
+  const [hasEnteredContest, setHasEnteredContest] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const router = useRouter();
 
-  const handleRegister = async () => {
+  useEffect(() => {
+    const checkUserPrediction = async () => {
+      try {
+        setIsCheckingStatus(true);
+        const prediction = await getUserPrediction(contest.id);
+        setHasEnteredContest(prediction !== null);
+      } catch (error) {
+        // Silent fail - if we can't check prediction status, assume not entered
+        console.error("Failed to check prediction status:", error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkUserPrediction();
+  }, [contest.id]);
+
+  const handleAction = async () => {
+    if (hasEnteredContest) {
+      // If already entered, just navigate to prediction page
+      router.push(`/contest/${contest.id}/predict`);
+      return;
+    }
+
     try {
       setIsRegistering(true);
-      await contestRegister(contest.id);
+      const result = await contestRegister(contest.id);
       toast.success("Successfully registered for the contest!");
+      
+      // Redirect to the prediction page
+      router.push(`/contest/${contest.id}/predict`);
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -67,11 +98,13 @@ export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) =>
       <CardFooter>
         <Button 
           className="w-full"
-          onClick={handleRegister}
-          disabled={!isRegistrationOpen || isRegistering}
+          onClick={handleAction}
+          disabled={(!isRegistrationOpen && !hasEnteredContest) || isRegistering || isCheckingStatus}
         >
-          {isRegistering ? "Registering..." : 
-           !isRegistrationOpen ? "Registration Closed" : 
+          {isCheckingStatus ? "Checking..." :
+           isRegistering ? "Registering..." : 
+           !isRegistrationOpen && !hasEnteredContest ? "Registration Closed" : 
+           hasEnteredContest ? "View Prediction" : 
            "Enter Contest"}
         </Button>
       </CardFooter>
