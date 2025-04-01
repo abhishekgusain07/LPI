@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "resources.premierleague.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "bcciplayerimages.s3.ap-south-1.amazonaws.com",
+        port: "",
+        pathname: "/**"
+      },
+      {
+        protocol: "https",
         hostname: "seo-heist.s3.amazonaws.com",
         port: "",
         pathname: "/**",
