@@ -1,65 +1,42 @@
-import Provider from "@/app/provider";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import AuthWrapper from "@/components/wrapper/auth-wrapper";
-import { Analytics } from "@vercel/analytics/react";
-import { GeistSans } from "geist/font/sans";
+import "@/app/globals.css";
 import type { Metadata } from "next";
-import "./globals.css";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ClerkProvider } from '@clerk/nextjs';
+import { Toaster } from "@/components/ui/sonner";
+import AppHeader from "@/components/AppHeader";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nextstarter.xyz/"),
-  title: {
-    default: "Next Starter",
-    template: `%s | Nextjs Starter Kit`,
-  },
-  description:
-    "The Ultimate Nextjs 15 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
-  openGraph: {
-    description:
-      "The Ultimate Nextjs 15 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
-    images: [
-      "https://dwdwn8b5ye.ufs.sh/f/MD2AM9SEY8GucGJl7b5qyE7FjNDKYduLOG2QHWh3f5RgSi0c",
-    ],
-    url: "https://nextstarter.xyz/",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Nextjs Starter Kit",
-    description:
-      "The Ultimate Nextjs 15 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
-    siteId: "",
-    creator: "@rasmickyy",
-    creatorId: "",
-    images: [
-      "https://dwdwn8b5ye.ufs.sh/f/MD2AM9SEY8GucGJl7b5qyE7FjNDKYduLOG2QHWh3f5RgSi0c",
-    ],
-  },
+  title: "PredictLeague - Sports Prediction Platform",
+  description: "Predict, compete, and climb the leaderboards in various sports competitions!",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <AuthWrapper>
+    <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={GeistSans.className}>
-          <Provider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {children}
-              <Toaster />
-            </ThemeProvider>
-          </Provider>
-          <Analytics />
+        <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <div className="relative flex min-h-screen flex-col">
+              <AppHeader />
+              <main className="flex-1">{children}</main>
+            </div>
+            <Toaster />
+          </ThemeProvider>
         </body>
       </html>
-    </AuthWrapper>
+    </ClerkProvider>
   );
 }
