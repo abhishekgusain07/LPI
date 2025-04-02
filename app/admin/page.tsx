@@ -11,12 +11,14 @@ import { getAdminStats, AdminStats } from "@/utils/data/admin/getAdminStats";
 import { getContestPredictionCount } from "@/utils/data/contest/getContestPredictionCount";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, PlusCircle, RefreshCw, BarChart3 } from "lucide-react";
+import { Search, PlusCircle, RefreshCw, BarChart3, Lock, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   Select,
   SelectContent,
@@ -31,6 +33,9 @@ type Competition = {
   name: string;
 };
 
+// Admin email
+const ADMIN_EMAIL = "valorantgusain@gmail.com";
+
 export default function AdminPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [contests, setContests] = useState<ContestWithCompetition[]>([]);
@@ -42,10 +47,37 @@ export default function AdminPage() {
   const [filterSport, setFilterSport] = useState("all");
   const [selectedContest, setSelectedContest] = useState<ContestWithCompetition | null>(null);
   const [predictionsCount, setPredictionsCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  
+  const { isLoaded, isSignedIn, user } = useUser();
+  const router = useRouter();
 
-  // Load initial data
+  // Check if the current user is an admin
+  useEffect(() => {
+    if (isLoaded) {
+      if (!isSignedIn || !user) {
+        // If not signed in, redirect to sign-in page
+        router.push("/sign-in");
+        return;
+      }
+
+      const userEmail = user.primaryEmailAddress?.emailAddress;
+      const hasAdminAccess = userEmail === ADMIN_EMAIL;
+      
+      setIsAdmin(hasAdminAccess);
+      
+      if (!hasAdminAccess) {
+        toast.error("You don't have permission to access the admin area");
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Load initial data only if the user is an admin
   useEffect(() => {
     const loadData = async () => {
+      // Only load data if user is admin
+      if (!isAdmin) return;
+      
       try {
         setLoading(true);
         
@@ -69,7 +101,7 @@ export default function AdminPage() {
     };
     
     loadData();
-  }, []);
+  }, [isAdmin]);
 
   // Filter contests when search term or filter sport changes
   useEffect(() => {
@@ -96,20 +128,49 @@ export default function AdminPage() {
 
   // Get prediction count when selected contest changes
   useEffect(() => {
-    if (selectedContest) {
-      const loadPredictionCount = async () => {
-        try {
-          const count = await getContestPredictionCount(selectedContest.id);
-          setPredictionsCount(count);
-        } catch (error: any) {
-          console.error("Failed to load prediction count:", error);
-          setPredictionsCount(0);
-        }
-      };
+    const loadPredictionCount = async () => {
+      // Skip if no contest is selected
+      if (!selectedContest) return;
       
-      loadPredictionCount();
-    }
+      try {
+        const count = await getContestPredictionCount(selectedContest.id);
+        setPredictionsCount(count);
+      } catch (error: any) {
+        console.error("Failed to load prediction count:", error);
+        setPredictionsCount(0);
+      }
+    };
+    
+    loadPredictionCount();
   }, [selectedContest]);
+
+  // If still checking authentication or if user is not admin, show appropriate message
+  if (isAdmin === null) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <Lock className="h-10 w-10 text-primary mb-4" />
+          <p className="text-lg font-medium">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin === false) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="bg-destructive/10 p-8 rounded-lg max-w-md w-full flex flex-col items-center">
+          <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-center mb-4">
+            Sorry, you don't have permission to access the admin dashboard. 
+            This area is restricted to administrators only.
+          </p>
+          <Button onClick={() => router.push("/")}>Return to Home</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleRefresh = async () => {
     try {

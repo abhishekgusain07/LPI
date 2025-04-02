@@ -21,6 +21,7 @@ interface TeamsTableProps {
 
 export function TeamsTable({ teams, onDeleteTeam }: TeamsTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<Record<string, boolean>>({});
 
   const handleDelete = async (teamId: string) => {
     if (!onDeleteTeam) return;
@@ -33,6 +34,10 @@ export function TeamsTable({ teams, onDeleteTeam }: TeamsTableProps) {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleImageError = (teamId: string) => {
+    setImageError(prev => ({ ...prev, [teamId]: true }));
   };
 
   if (teams.length === 0) {
@@ -58,7 +63,7 @@ export function TeamsTable({ teams, onDeleteTeam }: TeamsTableProps) {
           {teams.map((team) => (
             <TableRow key={team.id}>
               <TableCell>
-                {team.logoUrl ? (
+                {team.logoUrl && !imageError[team.id] ? (
                   <div className="relative h-8 w-8 overflow-hidden rounded-full">
                     <Image
                       src={team.logoUrl}
@@ -66,6 +71,9 @@ export function TeamsTable({ teams, onDeleteTeam }: TeamsTableProps) {
                       width={32}
                       height={32}
                       className="object-contain"
+                      onError={() => handleImageError(team.id)}
+                      priority={false}
+                      unoptimized={true}
                     />
                   </div>
                 ) : (
@@ -85,6 +93,7 @@ export function TeamsTable({ teams, onDeleteTeam }: TeamsTableProps) {
                     size="icon"
                     onClick={() => handleDelete(team.id)}
                     disabled={deletingId === team.id}
+                    type="button"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
