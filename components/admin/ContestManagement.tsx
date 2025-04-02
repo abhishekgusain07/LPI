@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { TeamForm } from "./TeamForm";
 import { Team, getTeamsByContest } from "@/utils/data/team/getTeamsByContest";
 import { teamDelete } from "@/utils/data/team/teamDelete";
-import { Trophy, Loader2, Users, Calendar } from "lucide-react";
+import { Trophy, Loader2, Users, Calendar, BarChart4 } from "lucide-react";
 import { ContestWithCompetition } from "@/utils/data/contest/contestGet";
 import { format } from "date-fns";
 import { TeamsTable } from "./TeamsTable";
+import { useRouter } from "next/navigation";
 
 interface ContestManagementProps {
   contest: ContestWithCompetition;
@@ -22,6 +23,7 @@ export function ContestManagement({ contest, predictionsCount }: ContestManageme
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -64,9 +66,19 @@ export function ContestManagement({ contest, predictionsCount }: ContestManageme
             Manage contest details, teams, and statistics
           </p>
         </div>
-        <Button variant="secondary" onClick={refreshTeams}>
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => router.push(`/admin/leaderboard?contestId=${contest.id}`)}
+            className="flex items-center gap-2"
+          >
+            <BarChart4 className="h-4 w-4" />
+            View Leaderboard
+          </Button>
+          <Button variant="secondary" onClick={refreshTeams}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Overview Cards */}

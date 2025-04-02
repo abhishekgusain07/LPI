@@ -11,7 +11,7 @@ import { getAdminStats, AdminStats } from "@/utils/data/admin/getAdminStats";
 import { getContestPredictionCount } from "@/utils/data/contest/getContestPredictionCount";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, PlusCircle, RefreshCw, BarChart3, Lock, AlertCircle } from "lucide-react";
+import { Search, PlusCircle, RefreshCw, BarChart3, Lock, AlertCircle, Trophy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -244,6 +244,10 @@ export default function AdminPage() {
                 Contest Management
               </TabsTrigger>
             )}
+            <TabsTrigger value="leaderboard" className="flex items-center gap-2" onClick={() => router.push("/admin/leaderboard")}>
+              <Trophy className="h-4 w-4" />
+              Leaderboard
+            </TabsTrigger>
           </TabsList>
           
           {(activeTab === "contests" || activeTab === "dashboard") && (
@@ -281,7 +285,18 @@ export default function AdminPage() {
 
         <TabsContent value="dashboard" className="space-y-8">
           {stats ? (
-            <DashboardStats stats={stats} />
+            <>
+              <DashboardStats stats={stats} />
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => router.push("/admin/leaderboard")}
+                  className="flex items-center gap-2"
+                >
+                  <Trophy className="h-4 w-4" />
+                  Show Leaderboard
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               Loading statistics...

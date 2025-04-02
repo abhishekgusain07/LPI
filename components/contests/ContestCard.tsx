@@ -7,10 +7,11 @@ import { ContestWithCompetition } from "@/utils/data/contest/contestGet";
 import { contestRegister } from "@/utils/data/contest/contestRegister";
 import { getUserPrediction } from "@/utils/data/prediction/getUserPrediction";
 import { format } from "date-fns";
-import { CalendarDays, Clock, Trophy, Users } from "lucide-react";
+import { CalendarDays, Clock, Trophy, Users, BarChart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -56,6 +57,17 @@ export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) =>
     }
   };
 
+  const handleViewLeaderboard = () => {
+    console.log("Navigating to leaderboard for contest:", contest.id);
+    try {
+      router.push(`/contests/${contest.id}/leaderboard`);
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback to the contest page if leaderboard navigation fails
+      router.push(`/contests/${contest.id}`);
+    }
+  };
+
   const now = new Date();
   const isRegistrationOpen = new Date(contest.predictionDeadline) > now;
 
@@ -95,7 +107,7 @@ export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) =>
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         <Button 
           className="w-full"
           onClick={handleAction}
@@ -106,6 +118,15 @@ export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) =>
            !isRegistrationOpen && !hasEnteredContest ? "Registration Closed" : 
            hasEnteredContest ? "View Prediction" : 
            "Enter Contest"}
+        </Button>
+        
+        <Button 
+          variant="outline"
+          className="w-full flex items-center gap-2"
+          onClick={handleViewLeaderboard}
+        >
+          <BarChart className="h-4 w-4" />
+          View Leaderboard
         </Button>
       </CardFooter>
     </Card>
