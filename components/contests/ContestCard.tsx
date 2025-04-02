@@ -2,133 +2,71 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { ContestWithCompetition } from "@/utils/data/contest/contestGet";
-import { contestRegister } from "@/utils/data/contest/contestRegister";
-import { getUserPrediction } from "@/utils/data/prediction/getUserPrediction";
+import { CalendarDays, Clock, Trophy, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
-import { CalendarDays, Clock, Trophy, Users, BarChart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 
-export const ContestCard = ({ contest }: { contest: ContestWithCompetition }) => {
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [hasEnteredContest, setHasEnteredContest] = useState(false);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+interface ContestCardProps {
+  contest: ContestWithCompetition;
+}
+
+export const ContestCard = ({ contest }: ContestCardProps) => {
   const router = useRouter();
-
-  useEffect(() => {
-    const checkUserPrediction = async () => {
-      try {
-        setIsCheckingStatus(true);
-        const prediction = await getUserPrediction(contest.id);
-        setHasEnteredContest(prediction !== null);
-      } catch (error) {
-        // Silent fail - if we can't check prediction status, assume not entered
-        console.error("Failed to check prediction status:", error);
-      } finally {
-        setIsCheckingStatus(false);
-      }
-    };
-
-    checkUserPrediction();
-  }, [contest.id]);
-
-  const handleAction = async () => {
-    if (hasEnteredContest) {
-      // If already entered, just navigate to prediction page
-      router.push(`/contest/${contest.id}/predict`);
-      return;
-    }
-
-    try {
-      setIsRegistering(true);
-      const result = await contestRegister(contest.id);
-      toast.success("Successfully registered for the contest!");
-      
-      // Redirect to the prediction page
-      router.push(`/contest/${contest.id}/predict`);
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
-  const handleViewLeaderboard = () => {
-    console.log("Navigating to leaderboard for contest:", contest.id);
-    try {
-      router.push(`/contests/${contest.id}/leaderboard`);
-    } catch (error) {
-      console.error("Navigation error:", error);
-      // Fallback to the contest page if leaderboard navigation fails
-      router.push(`/contests/${contest.id}`);
-    }
-  };
-
   const now = new Date();
   const isRegistrationOpen = new Date(contest.predictionDeadline) > now;
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="line-clamp-1">{contest.competition.name}</CardTitle>
+    <Card className="group overflow-hidden transition-all hover:shadow-lg hover:border-primary/50">
+      <CardHeader className="space-y-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+              {contest.competition.name} {contest.year}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Make your predictions and compete!
+            </p>
+          </div>
           <Badge 
-            variant="outline" 
-            className="capitalize bg-primary/5"
+            variant="secondary" 
+            className="capitalize shrink-0 bg-primary/10 text-primary border-primary/20"
           >
             {contest.competition.sportType}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Trophy className="w-4 h-4" />
-            <span>Season {contest.year}</span>
+            <CalendarDays className="h-4 w-4 text-green-500" />
+            <span>{format(new Date(contest.startTime), "MMM d, yyyy")}</span>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <CalendarDays className="w-4 h-4 text-green-500" />
-              <span>Starts: {format(new Date(contest.startTime), "PPP")}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <CalendarDays className="w-4 h-4 text-red-500" />
-              <span>Ends: {format(new Date(contest.endTime), "PPP")}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="w-4 h-4 text-yellow-500" />
-              <span>Register by: {format(new Date(contest.predictionDeadline), "PPP")}</span>
-            </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalendarDays className="h-4 w-4 text-red-500" />
+            <span>{format(new Date(contest.endTime), "MMM d, yyyy")}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+            <Clock className="h-4 w-4 text-yellow-500" />
+            <span>Register by {format(new Date(contest.predictionDeadline), "MMM d, h:mm a")}</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+
+      <CardFooter>
         <Button 
-          className="w-full"
-          onClick={handleAction}
-          disabled={(!isRegistrationOpen && !hasEnteredContest) || isRegistering || isCheckingStatus}
+          className="w-full group/btn relative"
+          onClick={() => router.push(`/contests/${contest.id}`)}
         >
-          {isCheckingStatus ? "Checking..." :
-           isRegistering ? "Registering..." : 
-           !isRegistrationOpen && !hasEnteredContest ? "Registration Closed" : 
-           hasEnteredContest ? "View Prediction" : 
-           "Enter Contest"}
-        </Button>
-        
-        <Button 
-          variant="outline"
-          className="w-full flex items-center gap-2"
-          onClick={handleViewLeaderboard}
-        >
-          <BarChart className="h-4 w-4" />
-          View Leaderboard
+          <span className="flex items-center gap-2 group-hover/btn:translate-x-[-4px] transition-transform">
+            <Trophy className="h-4 w-4" />
+            {isRegistrationOpen ? "Join Contest" : "View Contest"}
+          </span>
+          <ArrowRight className="h-4 w-4 absolute right-4 opacity-0 group-hover/btn:opacity-100 group-hover/btn:translate-x-1 transition-all" />
         </Button>
       </CardFooter>
     </Card>
-  );
+  )
 }; 

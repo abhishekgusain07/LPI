@@ -5,13 +5,14 @@ import { getContestById } from "@/utils/data/contest/getContestById";
 import { getContestLeaderboard, type LeaderboardEntry } from "@/utils/data/leaderboard/getContestLeaderboard";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, Loader2 } from "lucide-react";
+import { ArrowLeft, Trophy, Loader2, Medal } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 import { useAuth } from "@clerk/nextjs";
 import { getHistoricalContestWinners, ContestWinner } from "@/utils/data/leaderboard/getHistoricalContestWinners";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Import LoadingSpinner directly or define it inline if import isn't working
 const LoadingSpinner = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) => {
@@ -114,7 +115,7 @@ const ContestLeaderboardPage = () => {
     return (
       <div className="container py-8 flex flex-col items-center">
         <LoadingSpinner />
-        <p className="mt-4">Loading leaderboard...</p>
+        <p className="mt-4 text-muted-foreground">Loading leaderboard...</p>
       </div>
     );
   }
@@ -122,7 +123,7 @@ const ContestLeaderboardPage = () => {
   if (error) {
     return (
       <div className="container py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="border border-destructive/20 bg-destructive/10 text-destructive px-4 py-3 rounded-lg">
           <p>{error}</p>
           <Button
             variant="outline"
@@ -136,152 +137,193 @@ const ContestLeaderboardPage = () => {
     );
   }
 
+  const getRankBadge = (rank: number) => {
+    if (rank === 1) {
+      return <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50">🥇 1st</Badge>;
+    }
+    if (rank === 2) {
+      return <Badge className="bg-zinc-300/20 text-zinc-300 border-zinc-300/50">🥈 2nd</Badge>;
+    }
+    if (rank === 3) {
+      return <Badge className="bg-amber-700/20 text-amber-700 border-amber-700/50">🥉 3rd</Badge>;
+    }
+    return <span className="text-muted-foreground">{rank}th</span>;
+  };
+
   return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container py-8 space-y-8">
+      <div className="flex justify-between items-center">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="flex items-center gap-2"
-          onClick={handleBack}
+          className="flex items-center gap-2 hover:bg-accent"
+          onClick={() => router.push(`/contests/${contestId}`)}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contest
         </Button>
       </div>
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">{contestData?.title || "Contest"} Leaderboard</h1>
-        <p className="text-muted-foreground">
-          {contestData?.competitionTitle
-            ? `For ${contestData.competitionTitle} ${contestData.year}`
-            : ""}
-        </p>
-        {contestData?.competition?.sportType && (
-          <Badge variant="outline" className="capitalize mt-2">
-            {contestData.competition.sportType}
-          </Badge>
-        )}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">{contestData?.title || "Contest"} Leaderboard</h1>
+        <div className="flex items-center gap-3">
+          <p className="text-muted-foreground">
+            {contestData?.competitionTitle
+              ? `${contestData.competitionTitle} ${contestData.year}`
+              : ""}
+          </p>
+          {contestData?.competition?.sportType && (
+            <Badge variant="secondary" className="capitalize">
+              {contestData.competition.sportType}
+            </Badge>
+          )}
+        </div>
       </div>
 
-      <Tabs defaultValue="current" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
+      <Tabs defaultValue="current" value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
           <TabsTrigger value="current">Current Standings</TabsTrigger>
           <TabsTrigger value="historical">Historical Winners</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="current">
-          {/* Current User Section (if logged in and in leaderboard) */}
+        <TabsContent value="current" className="space-y-6">
+          {/* Current User Section */}
           {currentUser && (
-            <div className="mb-6 p-4 border rounded-lg bg-blue-50 border-blue-200">
-              <h2 className="text-lg font-semibold mb-3">Your Ranking</h2>
-              <div className="flex items-center gap-4">
-                <div className="flex-none w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-semibold">
-                  {currentUser.rank}
-                </div>
-                <div className="flex items-center gap-3 flex-1">
-                  <UserAvatar
-                    imageUrl={currentUser.profileImageUrl}
-                    fallbackName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
-                    size="md"
-                  />
-                  <div>
-                    <p className="font-medium">
-                      {currentUser.firstName} {currentUser.lastName}{" "}
-                      <span className="inline-block ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 text-xs rounded">
-                        You
-                      </span>
-                    </p>
+            <Card className="bg-primary/5 border-primary/10">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex-none w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center font-semibold text-lg">
+                    {currentUser.rank}
+                  </div>
+                  <div className="flex items-center gap-3 flex-1">
+                    <UserAvatar
+                      imageUrl={currentUser.profileImageUrl}
+                      fallbackName={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
+                      size="lg"
+                    />
+                    <div>
+                      <p className="font-medium text-lg">
+                        {currentUser.firstName} {currentUser.lastName}
+                      </p>
+                      <Badge variant="secondary" className="mt-1">Your Position</Badge>
+                    </div>
+                  </div>
+                  <div className="flex-none text-right">
+                    <p className="font-bold text-2xl text-primary">{currentUser.score}</p>
+                    <p className="text-xs text-muted-foreground">Points</p>
                   </div>
                 </div>
-                <div className="flex-none">
-                  <p className="font-bold text-lg">{currentUser.score}</p>
-                  <p className="text-xs text-muted-foreground">Points</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Main Leaderboard */}
-          <div>
-            <h2 className="text-lg font-semibold mb-3">Leaderboard</h2>
-            
-            {leaderboard.length === 0 ? (
-              <div className="text-center py-8 border rounded-md bg-muted/20">
-                <p>No participants yet.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="py-3 px-4 text-left font-medium text-muted-foreground">Rank</th>
-                      <th className="py-3 px-4 text-left font-medium text-muted-foreground">Participant</th>
-                      <th className="py-3 px-4 text-right font-medium text-muted-foreground">Points</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaderboard.map((entry) => (
-                      <tr
-                        key={entry.id}
-                        className={`border-b hover:bg-muted/20 ${
-                          entry.isCurrentUser ? "bg-blue-50" : ""
-                        }`}
-                      >
-                        <td className="py-3 px-4">{entry.rank}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar
-                              imageUrl={entry.profileImageUrl}
-                              fallbackName={`${entry.firstName || ''} ${entry.lastName || ''}`}
-                              size="sm"
-                            />
-                            <span>
-                              {entry.firstName} {entry.lastName}{" "}
-                              {entry.isCurrentUser && (
-                                <span className="inline-block ml-1 px-1.5 py-0.5 bg-blue-200 text-blue-800 text-xs rounded">
-                                  You
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right font-medium">{entry.score}</td>
+          <Card>
+            <CardHeader>
+              <CardTitle>All Participants</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {leaderboard.length === 0 ? (
+                <div className="text-center py-12">
+                  <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground">No participants yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        <th className="py-3 px-4 text-left font-medium text-muted-foreground">Rank</th>
+                        <th className="py-3 px-4 text-left font-medium text-muted-foreground">Participant</th>
+                        <th className="py-3 px-4 text-right font-medium text-muted-foreground">Points</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody className="divide-y divide-border/50">
+                      {leaderboard.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className={cn(
+                            "group transition-colors hover:bg-muted/50",
+                            entry.isCurrentUser && "bg-primary/5"
+                          )}
+                        >
+                          <td className="py-4 px-4">
+                            {getRankBadge(entry.rank)}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <UserAvatar
+                                imageUrl={entry.profileImageUrl}
+                                fallbackName={`${entry.firstName || ''} ${entry.lastName || ''}`}
+                                size="sm"
+                              />
+                              <div>
+                                <p className="font-medium">
+                                  {entry.firstName} {entry.lastName}
+                                </p>
+                                {entry.isCurrentUser && (
+                                  <p className="text-xs text-primary">You</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <span className="font-semibold">{entry.score}</span>
+                            <span className="text-muted-foreground ml-1 text-sm">pts</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="historical">
           <Card>
             <CardHeader>
-              <CardTitle>Historical Winners: {contestData?.competition?.name}</CardTitle>
+              <CardTitle>Historical Winners</CardTitle>
+              <p className="text-sm text-muted-foreground">Past champions of {contestData?.competition?.name}</p>
             </CardHeader>
             <CardContent>
               {historicalWinners.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
+                  <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                   <p className="text-muted-foreground">No historical data available</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {historicalWinners.map((winner) => (
-                    <div key={winner.year} className="flex items-center gap-4 p-3 border rounded-lg">
-                      <div className="bg-yellow-100 p-2 rounded-full">
-                        <Trophy className="h-5 w-5 text-yellow-600" />
+                    <div 
+                      key={winner.year} 
+                      className="flex items-center gap-4 p-4 rounded-lg border border-border/50 bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="bg-primary/10 p-2.5 rounded-full">
+                        <Trophy className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {winner.firstName} {winner.lastName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {winner.year} Winner
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar
+                            imageUrl={winner.profileImageUrl}
+                            fallbackName={`${winner.firstName || ''} ${winner.lastName || ''}`}
+                            size="sm"
+                          />
+                          <div>
+                            <p className="font-medium truncate">
+                              {winner.firstName} {winner.lastName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {winner.year} Champion
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="font-bold">{winner.score} pts</div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">{winner.score}</p>
+                        <p className="text-xs text-muted-foreground">points</p>
+                      </div>
                     </div>
                   ))}
                 </div>
