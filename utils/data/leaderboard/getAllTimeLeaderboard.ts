@@ -38,17 +38,17 @@ export const getAllTimeLeaderboard = async (): Promise<AllTimeLeaderboardEntry[]
     // Get all users with their aggregated scores across all contests
     const leaderboardData = await db
       .select({
-        userId: userContestScores.userId,
-        totalScore: sql<number>`sum(${userContestScores.score})`,
-        contestsPlayed: sql<number>`count(${userContestScores.contestId})`,
+        userId: users.id,
+        totalScore: sql<number>`COALESCE(sum(${userContestScores.score}), 0)`,
+        contestsPlayed: sql<number>`COALESCE(count(${userContestScores.contestId}), 0)`,
         firstName: users.firstName,
         lastName: users.lastName,
         profileImageUrl: users.profileImageUrl,
       })
-      .from(userContestScores)
-      .innerJoin(users, eq(userContestScores.userId, users.id))
-      .groupBy(userContestScores.userId, users.firstName, users.lastName, users.profileImageUrl)
-      .orderBy(desc(sql<number>`sum(${userContestScores.score})`), desc(sql<number>`count(${userContestScores.contestId})`));
+      .from(users)
+      .leftJoin(userContestScores, eq(userContestScores.userId, users.id))
+      .groupBy(users.id, users.firstName, users.lastName, users.profileImageUrl)
+      .orderBy(desc(sql<number>`COALESCE(sum(${userContestScores.score}), 0)`), desc(sql<number>`COALESCE(count(${userContestScores.contestId}), 0)`));
 
     // Calculate rankings and mark current user
     const leaderboard: AllTimeLeaderboardEntry[] = leaderboardData
