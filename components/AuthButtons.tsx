@@ -13,12 +13,13 @@ export default function AuthButtons() {
     setIsClient(true);
   }, []);
 
-  // Show loading state if clerk is not loaded yet
+  // Show skeleton loading state while clerk is initializing
   if (!isClient || !isLoaded) {
     return (
-      <Button variant="ghost" size="sm" disabled className="opacity-70">
-        Loading...
-      </Button>
+      <div className="h-9 w-20 rounded-md bg-muted/30 animate-pulse flex items-center justify-center">
+        <div className="h-4 w-4 rounded-full bg-muted/50 mr-2"></div>
+        <div className="h-3 w-10 rounded-sm bg-muted/50"></div>
+      </div>
     );
   }
   
